@@ -84,11 +84,9 @@ int main(){
          exit(5);
      }
 
-     printf("aaaa\n");
-
     len = sizeof(struct sockaddr_storage);
 
-    // Attente connexion du client
+    // Attente connexion du client : boucle infinie du serveur
     while(1) {
 
         // Lorsque demande de connexion, creation d'une socket de communication avec le client
@@ -97,8 +95,6 @@ int main(){
             perror("Erreur accept\n");
             exit(6);
         }
-
-        printf("aaaa\n");
         pid_t pid = getpid();
         printf("PID du père : %d\n",pid);
 
@@ -124,29 +120,11 @@ int main(){
                 buffer[ecode] = '\0';
                 printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
 
-                // USER anonymous@ftp.fau.de
-                // USER anonymous
-                // ftp.fau.de
-
+                // Lire USER login@serverName
                 char login[50], serverName[50];
 
                 sscanf(buffer, "%49[^@]@%50s", login, serverName);
                 strcat(login,"\n");
-
-                //"toto:tutu:tata"
-                // char a[10],b[10],c[10];
-                // sscanf(buffer,"%[^:]:%[^:]:%s", a,b,c);
-
-                //"1:2:3"
-
-                //solution 1:
-                // char a[10],b[10],c[10];
-                // sscanf(buffer,"%[^:]:%[^:]:%s", a,b,c);
-
-                //solution 2:
-                // int a,b,c;
-                // sscanf(buffer,"%d:%d:%d", &a,&b,&c);
-
 
                 printf("login est %s et la machine est %s\n", login, serverName);
 
@@ -325,22 +303,24 @@ int main(){
                 exit(1);
             break;
         }
+        /*
         idProc = wait( &rapport ) ;
         while ( idProc != -1 ) {
             printf("\nTerminaison du fils de PID = %d\n", idProc);
-            if WIFEXITED(rapport) { /* fin normale */
+            if WIFEXITED(rapport) {
                 statut = WEXITSTATUS(rapport) ;
                 printf("Fin normale, statut = %d\n", statut);
             } else {
-                if WIFSIGNALED(rapport) { /* fin anormale */
+                if WIFSIGNALED(rapport) {
                     numSignal = WTERMSIG(rapport) ;
                     printf("Fin anormale, numSignal = %d qui correspond à %s\n",numSignal,strsignal(numSignal));
-                } else { /* fin vraiment très anormale */
+                } else {
                     perror("Erreur système");
                 }
             }
             idProc = wait( &rapport ) ;
-        }
+        } */
+        
     }  
 }
 
