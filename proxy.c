@@ -88,269 +88,260 @@ int main(){
 
     len = sizeof(struct sockaddr_storage);
 
-            // Attente connexion du client
+    // Attente connexion du client
+    while(1) {
 
-while(1) {
+        // Lorsque demande de connexion, creation d'une socket de communication avec le client
+        descSockCOM = accept(descSockRDV, (struct sockaddr *) &from, &len);
+        if (descSockCOM == -1){
+            perror("Erreur accept\n");
+            exit(6);
+        }
 
-     // Lorsque demande de connexion, creation d'une socket de communication avec le client
-     descSockCOM = accept(descSockRDV, (struct sockaddr *) &from, &len);
-     if (descSockCOM == -1){
-         perror("Erreur accept\n");
-         exit(6);
-     }
+        printf("aaaa\n");
+        pid_t pid = getpid();
+        printf("PID du père : %d\n",pid);
 
-     printf("aaaa\n");
-    pid_t pid = getpid();
-    printf("PID du père : %d\n",pid);
+        int rapport, numSignal, statut;
+        pid_t idProc;
 
-    int rapport, numSignal, statut;
-    pid_t idProc;
+        idProc = fork();
+        switch(idProc) {
+            case -1:
+                perror("Echec fork");
+                exit(1);
+            case 0:
+                close(descSockRDV);
+                // TRAITEMENT DU FILS
 
-    idProc = fork();
-    switch(idProc) {
-        case -1:
-            perror("Echec fork");
-            exit(1);
-        case 0:
-            // TRAITEMENT DU FILS
+                // Echange de données avec le client connecté
+                strcpy(buffer, "220 BLABLABLA\n");
+                write(descSockCOM, buffer, strlen(buffer));
 
+                //Echange de donneés avec le serveur
+                ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
 
-    // Echange de données avec le client connecté
-    strcpy(buffer, "220 BLABLABLA\n");
-    write(descSockCOM, buffer, strlen(buffer));
+                // USER anonymous@ftp.fau.de
+                // USER anonymous
+                // ftp.fau.de
 
-    //Echange de donneés avec le serveur
-    ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
+                char login[50], serverName[50];
 
-    // USER anonymous@ftp.fau.de
-    // USER anonymous
-    // ftp.fau.de
+                sscanf(buffer, "%49[^@]@%50s", login, serverName);
+                strcat(login,"\n");
 
-    char login[50], serverName[50];
+                //"toto:tutu:tata"
+                // char a[10],b[10],c[10];
+                // sscanf(buffer,"%[^:]:%[^:]:%s", a,b,c);
 
-    sscanf(buffer, "%49[^@]@%50s", login, serverName);
-    strcat(login,"\n");
+                //"1:2:3"
 
-    //"toto:tutu:tata"
-    // char a[10],b[10],c[10];
-    // sscanf(buffer,"%[^:]:%[^:]:%s", a,b,c);
+                //solution 1:
+                // char a[10],b[10],c[10];
+                // sscanf(buffer,"%[^:]:%[^:]:%s", a,b,c);
 
-    //"1:2:3"
-
-    //solution 1:
-    // char a[10],b[10],c[10];
-    // sscanf(buffer,"%[^:]:%[^:]:%s", a,b,c);
-
-    //solution 2:
-    // int a,b,c;
-    // sscanf(buffer,"%d:%d:%d", &a,&b,&c);
-
-
-    printf("login est %s et la machine est %s\n", login, serverName);
-
-    int sockServerCtrl;
-
-    ecode = connect2Server(serverName,"21",&sockServerCtrl);
-    if (ecode == -1){
-        perror("Pb connexion avec le serveur FTP");
-        exit(7);
-    }
-
-    //S->P : Lire 220 ...
-    ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
-
-    //P->S Envoyer USER ... au serveur
-    write(sockServerCtrl, login, strlen(login));
-
-    //S->P : Lire 331
-    ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
-
-    //P->C : 331
-    write(descSockCOM, buffer, strlen(buffer));
-
-    //C->P : Lire PASS ...
-    ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-
-    //P->S : Envoyer PASS ... au serveur
-    write(sockServerCtrl, buffer, strlen(buffer));
-
-    //S->P : Lire 230
-    ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
-
-    //P->C : 230
-    write(descSockCOM, buffer, strlen(buffer));
-
-    //C->P : Lire SYST
-    ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
+                //solution 2:
+                // int a,b,c;
+                // sscanf(buffer,"%d:%d:%d", &a,&b,&c);
 
 
-    //P->S : Envoyer SYST
-    write(sockServerCtrl, buffer, strlen(buffer));
+                printf("login est %s et la machine est %s\n", login, serverName);
 
-    //S->P : Lire 215 ...
-    ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
+                int sockServerCtrl;
 
-    //P->C : Envoyer 215 ...
-    write(descSockCOM, buffer, strlen(buffer));
+                ecode = connect2Server(serverName,"21",&sockServerCtrl);
+                if (ecode == -1){
+                    perror("Pb connexion avec le serveur FTP");
+                    exit(7);
+                }
 
-    //C->P : Lire PORT a,b,c,d,e,f
-    char* a[4];
-    char* b[4];
-    char* c[4];
-    char* d[4];
-    int e,f,g;
-    char* port[10];
-    ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
-    sscanf(buffer, "PORT %[0123456789],%[0123456789],%[0123456789],%[0123456789],%d,%d", a, b, c, d, &e, &f);
-   
-    // Créer serverName = a.b.c.d et port = 256 * e + f
-    strcpy(serverName, a);
-    strcat(serverName, ".");
-    strcat(serverName, b);
-    strcat(serverName, ".");
-    strcat(serverName, c);
-    strcat(serverName, ".");
-    strcat(serverName, d);
-    g = e*256 + f;
-    sprintf(port, "%d", g);
-    printf("Server name = %s, Port = %s\n", serverName, port); // AAAAAA
+                //S->P : Lire 220 ...
+                ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
 
-    // Création de la connection passive entre C et P
-    int socketPassive;
+                //P->S Envoyer USER ... au serveur
+                write(sockServerCtrl, login, strlen(login));
 
-    ecode = connect2Server(serverName, port, &socketPassive);
+                //S->P : Lire 331
+                ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
 
-    if (ecode == -1){
-        perror("Pb connexion avec le client");
-        exit(7);
-    }
+                //P->C : 331
+                write(descSockCOM, buffer, strlen(buffer));
 
-    // P->S : Envoyer PASV
-    write(sockServerCtrl, "PASV\r\n", strlen("PASV\r\n"));
+                //C->P : Lire PASS ...
+                ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
 
-    // S->P : Lire 227 Entering Passive Mode a,b,c,d,e,f
-    ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
-    sscanf(buffer, "227 Entering Passive Mode (%[0123456789],%[0123456789],%[0123456789],%[0123456789],%d,%d)", a, b, c, d, &e, &f);
+                //P->S : Envoyer PASS ... au serveur
+                write(sockServerCtrl, buffer, strlen(buffer));
 
-    // Créer serverName = a.b.c.d et port = 256 * e + f
-    strcpy(serverName, a);
-    strcat(serverName, ".");
-    strcat(serverName, b);
-    strcat(serverName, ".");
-    strcat(serverName, c);
-    strcat(serverName, ".");
-    strcat(serverName, d);
-    g = e*256 + f;
-    sprintf(port, "%d", g);
-    printf("Server name = %s, Port = %s\n", serverName, port);
+                //S->P : Lire 230
+                ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
 
-    // Création de la connection active entre P et S
-    int socketActive;
+                //P->C : 230
+                write(descSockCOM, buffer, strlen(buffer));
 
-    ecode = connect2Server(serverName, port, &socketActive);
+                //C->P : Lire SYST
+                ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
 
-    if (ecode == -1){
-        perror("Pb connexion avec le serveur");
-        exit(7);
-    }
 
-    //P->C : 200
-    write(descSockCOM, "200 Connecté avec succès\n", strlen("200 Connecté avec succès\n"));
-    
-    //C->P : Lire LIST
-    ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
+                //P->S : Envoyer SYST
+                write(sockServerCtrl, buffer, strlen(buffer));
 
-    //P->S : Envoyer LIST
-    write(sockServerCtrl, buffer, strlen(buffer));
+                //S->P : Lire 215 ...
+                ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
 
-    //S->P : Lire la réponse 150 opening ...
-    ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
-    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-    buffer[ecode] = '\0';
-    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
+                //P->C : Envoyer 215 ...
+                write(descSockCOM, buffer, strlen(buffer));
 
-    //P->C : Envoyer 150 ...
-    write(descSockCOM, buffer, strlen(buffer));
+                //C->P : Lire PORT a,b,c,d,e,f
+                char* a[4];
+                char* b[4];
+                char* c[4];
+                char* d[4];
+                int e,f,g;
+                char* port[10];
+                ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
+                sscanf(buffer, "PORT %[0123456789],%[0123456789],%[0123456789],%[0123456789],%d,%d", a, b, c, d, &e, &f);
+            
+                // Créer serverName = a.b.c.d et port = 256 * e + f
+                strcpy(serverName, a);
+                strcat(serverName, ".");
+                strcat(serverName, b);
+                strcat(serverName, ".");
+                strcat(serverName, c);
+                strcat(serverName, ".");
+                strcat(serverName, d);
+                g = e*256 + f;
+                sprintf(port, "%d", g);
+                printf("Server name = %s, Port = %s\n", serverName, port); // AAAAAA
 
-    while(strcmp(buffer, "")) {
-        //S->P : Lire le résultat de LIST
-        ecode = read(socketActive, buffer, MAXBUFFERLEN);
-        if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
-        buffer[ecode] = '\0';
-        printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
+                // Création de la connection passive entre C et P
+                int socketPassive;
 
-        //P-> : Envoyer le résultat de LIST
-        write(socketPassive, buffer, strlen(buffer)); 
-    }
+                ecode = connect2Server(serverName, port, &socketPassive);
 
-    //P->C : Envoyer 226 Transfer complete
-    write(descSockCOM, "226 Transfer complete\n", strlen("226 Transfer complete\n"));
+                if (ecode == -1){
+                    perror("Pb connexion avec le client");
+                    exit(7);
+                }
 
-    
+                // P->S : Envoyer PASV
+                write(sockServerCtrl, "PASV\r\n", strlen("PASV\r\n"));
 
-  //Fermeture de la connexion
-  close(descSockCOM);
-  
-  close(socketActive);
-  close(socketPassive);
+                // S->P : Lire 227 Entering Passive Mode a,b,c,d,e,f
+                ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
+                sscanf(buffer, "227 Entering Passive Mode (%[0123456789],%[0123456789],%[0123456789],%[0123456789],%d,%d)", a, b, c, d, &e, &f);
 
-            // FIN TRAITEMENT DU FILS
-            exit(1);
-        break;
-    }
-    idProc = wait( &rapport ) ;
-    while ( idProc != -1 ) {
-        printf("\nTerminaison du fils de PID = %d\n", idProc);
-        if WIFEXITED(rapport) { /* fin normale */
-            statut = WEXITSTATUS(rapport) ;
-            printf("Fin normale, statut = %d\n", statut);
-        } else {
-            if WIFSIGNALED(rapport) { /* fin anormale */
-                numSignal = WTERMSIG(rapport) ;
-                printf("Fin anormale, numSignal = %d qui correspond à %s\n",numSignal,strsignal(numSignal));
-            } else { /* fin vraiment très anormale */
-                perror("Erreur système");
-            }
+                // Créer serverName = a.b.c.d et port = 256 * e + f
+                strcpy(serverName, a);
+                strcat(serverName, ".");
+                strcat(serverName, b);
+                strcat(serverName, ".");
+                strcat(serverName, c);
+                strcat(serverName, ".");
+                strcat(serverName, d);
+                g = e*256 + f;
+                sprintf(port, "%d", g);
+                printf("Server name = %s, Port = %s\n", serverName, port);
+
+                // Création de la connection active entre P et S
+                int socketActive;
+
+                ecode = connect2Server(serverName, port, &socketActive);
+
+                if (ecode == -1){
+                    perror("Pb connexion avec le serveur");
+                    exit(7);
+                }
+
+                //P->C : 200
+                write(descSockCOM, "200 Connecté avec succès\n", strlen("200 Connecté avec succès\n"));
+                
+                //C->P : Lire LIST
+                ecode = read(descSockCOM, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU CLIENT: \"%s\".\n",buffer);
+
+                //P->S : Envoyer LIST
+                write(sockServerCtrl, buffer, strlen(buffer));
+
+                //S->P : Lire la réponse 150 opening ...
+                ecode = read(sockServerCtrl, buffer, MAXBUFFERLEN);
+                if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                buffer[ecode] = '\0';
+                printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
+
+                //P->C : Envoyer 150 ...
+                write(descSockCOM, buffer, strlen(buffer));
+
+                while(strcmp(buffer, "")) {
+                    //S->P : Lire le résultat de LIST
+                    ecode = read(socketActive, buffer, MAXBUFFERLEN);
+                    if (ecode == -1) {perror("Problème de lecture\n"); exit(3);}
+                    buffer[ecode] = '\0';
+                    printf("MESSAGE RECU DU SERVEUR: \"%s\".\n",buffer);
+
+                    //P-> : Envoyer le résultat de LIST
+                    write(socketPassive, buffer, strlen(buffer)); 
+                }
+
+                //P->C : Envoyer 226 Transfer complete
+                write(descSockCOM, "226 Transfer complete\n", strlen("226 Transfer complete\n"));
+
+                
+
+                //Fermeture de la connexion
+                close(descSockCOM);
+                close(socketActive);
+                close(socketPassive);
+
+                // FIN TRAITEMENT DU FILS
+                exit(1);
+            break;
         }
         idProc = wait( &rapport ) ;
-    }
-    close(descSockRDV);
-}
-
-
-
-
-
-     
+        while ( idProc != -1 ) {
+            printf("\nTerminaison du fils de PID = %d\n", idProc);
+            if WIFEXITED(rapport) { /* fin normale */
+                statut = WEXITSTATUS(rapport) ;
+                printf("Fin normale, statut = %d\n", statut);
+            } else {
+                if WIFSIGNALED(rapport) { /* fin anormale */
+                    numSignal = WTERMSIG(rapport) ;
+                    printf("Fin anormale, numSignal = %d qui correspond à %s\n",numSignal,strsignal(numSignal));
+                } else { /* fin vraiment très anormale */
+                    perror("Erreur système");
+                }
+            }
+            idProc = wait( &rapport ) ;
+        }
+    }  
 }
 
 int connect2Server(const char *serverName, const char *port, int *descSock){
