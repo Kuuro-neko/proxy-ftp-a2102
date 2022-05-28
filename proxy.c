@@ -7,7 +7,6 @@
 #include  <stdbool.h>
 
 
-
 #define SERVADDR "127.0.0.1"          // Définition de l'adresse IP d'écoute
 #define SERVPORT "0"                // Définition du port d'écoute, si 0 port choisi dynamiquement
 #define LISTENLEN 1                 // Taille du tampon de demande de connexion
@@ -95,9 +94,6 @@ int main(){
             perror("Erreur accept\n");
             exit(6);
         }
-        pid_t pid = getpid();
-        printf("PID du père : %d\n",pid);
-
         int rapport, numSignal, statut;
         pid_t idProc;
 
@@ -109,7 +105,7 @@ int main(){
             case 0:
                 close(descSockRDV);
                 // TRAITEMENT DU FILS
-
+                printf("Nouvelle connexion au serveur. PID du nouveau processus : %d", getpid());
                 // Echange de données avec le client connecté
                 strcpy(buffer, "220 BLABLABLA\n");
                 write(descSockCOM, buffer, strlen(buffer));
@@ -292,35 +288,16 @@ int main(){
                 //P->C : Envoyer 226 Transfer complete
                 write(descSockCOM, "226 Transfer complete\n", strlen("226 Transfer complete\n"));
 
-                
-
                 //Fermeture de la connexion
                 close(descSockCOM);
                 close(socketActive);
                 close(socketPassive);
+                printf("Fin du processus de PID : %d", getpid());
 
                 // FIN TRAITEMENT DU FILS
                 exit(1);
             break;
         }
-        /*
-        idProc = wait( &rapport ) ;
-        while ( idProc != -1 ) {
-            printf("\nTerminaison du fils de PID = %d\n", idProc);
-            if WIFEXITED(rapport) {
-                statut = WEXITSTATUS(rapport) ;
-                printf("Fin normale, statut = %d\n", statut);
-            } else {
-                if WIFSIGNALED(rapport) {
-                    numSignal = WTERMSIG(rapport) ;
-                    printf("Fin anormale, numSignal = %d qui correspond à %s\n",numSignal,strsignal(numSignal));
-                } else {
-                    perror("Erreur système");
-                }
-            }
-            idProc = wait( &rapport ) ;
-        } */
-        
     }  
 }
 
@@ -379,9 +356,6 @@ int connect2Server(const char *serverName, const char *port, int *descSock){
         perror("Connexion impossible");
         return -1;
     }
-
+    
     return 0;
-
-
 }
-
